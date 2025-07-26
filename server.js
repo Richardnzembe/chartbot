@@ -8,13 +8,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const apiKey = process.env.OPENROUTER_API_KEY; // Set this on Railway as env variable
+const apiKey = process.env.OPENROUTER_API_KEY; // Don't hardcode — keep secure in Railway env vars
 
-// Health check
+// Optional: simple home route
 app.get('/', (req, res) => {
-  res.send('✅ Chartbot backend is running!');
+  res.send('✅ Chartbot backend is live!');
 });
 
+// Main chat route
 app.post('/chat', async (req, res) => {
   const question = req.body.question;
 
@@ -30,7 +31,7 @@ app.post('/chat', async (req, res) => {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'openrouter/llama-2-7b-chat',
+        model: 'mistralai/mistral-7b-instruct', // ✅ Updated to valid OpenRouter model
         messages: [{ role: 'user', content: question }],
       }),
     });
@@ -42,10 +43,11 @@ app.post('/chat', async (req, res) => {
     }
 
     const data = await response.json();
-    res.json({ answer: data.choices[0].message.content });
+    const message = data?.choices?.[0]?.message?.content || '⚠️ No answer returned.';
+    res.json({ answer: message });
   } catch (err) {
     console.error('Fetch failed:', err);
-    res.status(500).json({ error: 'Failed to contact AI server' });
+    res.status(500).json({ error: '❌ Failed to contact OpenRouter AI' });
   }
 });
 
