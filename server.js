@@ -1,3 +1,5 @@
+// server.js
+
 import express from 'express';
 import fetch from 'node-fetch';
 import cors from 'cors';
@@ -6,9 +8,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const apiKey = process.env.OPENROUTER_API_KEY; // <-- Must be set in Railway env vars!
+const apiKey = process.env.OPENROUTER_API_KEY; // Set this on Railway as env variable
 
-// Simple health check route
+// Health check
 app.get('/', (req, res) => {
   res.send('✅ Chartbot backend is running!');
 });
@@ -21,7 +23,7 @@ app.post('/chat', async (req, res) => {
   }
 
   try {
-    const response = await fetch('https://api.openrouter.ai/v1/chat/completions', {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -34,19 +36,20 @@ app.post('/chat', async (req, res) => {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      return res.status(response.status).json({ error: errorText });
+      const error = await response.text();
+      console.error('OpenRouter API error:', error);
+      return res.status(response.status).json({ error });
     }
 
     const data = await response.json();
     res.json({ answer: data.choices[0].message.content });
-  } catch (error) {
-    console.error('OpenRouter API error:', error);
-    res.status(500).json({ error: 'OpenRouter API request failed' });
+  } catch (err) {
+    console.error('Fetch failed:', err);
+    res.status(500).json({ error: 'Failed to contact AI server' });
   }
 });
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-  console.log(`✅ Server listening on port ${port}`);
+  console.log(`✅ Server running on port ${port}`);
 });
