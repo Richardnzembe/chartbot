@@ -9,15 +9,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ Use environment variable for your API key (set it in Railway Variables)
 const apiKey = process.env.OPENROUTER_API_KEY;
 
-// ✅ Root route to test if backend is running
+// Test route
 app.get('/', (req, res) => {
   res.send('✅ Chartbot backend is running!');
 });
 
-// ✅ Handle chat requests
+// Chat route with teaching personality
 app.post('/chat', async (req, res) => {
   const question = req.body.question;
 
@@ -34,7 +33,22 @@ app.post('/chat', async (req, res) => {
       },
       body: JSON.stringify({
         model: 'mistralai/mistral-7b-instruct',
-        messages: [{ role: 'user', content: question }],
+        messages: [
+          {
+            role: 'system',
+            content: `
+You are a qualified and friendly teacher from Dalswin Life and Business Institute. 
+Always greet the student warmly. 
+When asked a question, never just give the answer — instead, explain the concept clearly with examples. 
+Help the student understand why the answer is correct and guide them like a real instructor.
+Avoid one-line replies. Use simple but academic language suitable for high school or college students.
+            `.trim(),
+          },
+          {
+            role: 'user',
+            content: question,
+          },
+        ],
       }),
     });
 
@@ -52,7 +66,7 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-// ✅ Handle Word document download
+// Download conversation as Word doc
 app.post('/download', async (req, res) => {
   const chat = req.body.chat;
 
@@ -93,7 +107,7 @@ app.post('/download', async (req, res) => {
   }
 });
 
-// ✅ Start server
+// Start server
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`✅ Server running on port ${port}`);
