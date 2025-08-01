@@ -1,5 +1,3 @@
-// server.js
-
 import express from 'express';
 import fetch from 'node-fetch';
 import cors from 'cors';
@@ -13,16 +11,37 @@ const apiKey = process.env.OPENROUTER_API_KEY;
 
 // Test route
 app.get('/', (req, res) => {
-  res.send('✅ Dalswin Chartbot backend is running!');
+  res.send('✅ Chartbot backend is running!');
 });
 
-// Chat route with strong teaching tone & filters
+// Chat route with teaching personality and quiz mode
 app.post('/chat', async (req, res) => {
-  const question = req.body.question;
+  const { question, userEmail, mode } = req.body;
 
   if (!question) {
     return res.status(400).json({ error: 'No question provided' });
   }
+  if (!userEmail) {
+    return res.status(400).json({ error: 'User email required for memory' });
+  }
+
+  // System message changes based on mode
+  const systemMessage = mode === 'quiz'
+    ? `
+You are a professional quiz coach at Dalswin Life and Business Institute.
+When in quiz mode, ask the student questions related to school subjects, guide their thinking, and explain answers step-by-step.
+Do not give direct answers immediately. Engage the student in active learning.
+Use clear, friendly, and encouraging language.
+Avoid off-topic discussions or rumors.
+    `.trim()
+    : `
+You are a qualified and friendly teacher from Dalswin Life and Business Institute.
+Always greet the student warmly but only once per session.
+Explain concepts clearly with examples.
+Avoid giving direct answers; guide the student to understand the reasoning.
+Use simple academic language suitable for high school and college students.
+Avoid off-topic discussions or rumors.
+    `.trim();
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -34,31 +53,9 @@ app.post('/chat', async (req, res) => {
       body: JSON.stringify({
         model: 'mistralai/mistral-7b-instruct',
         messages: [
-          {
-            role: 'system',
-            content: `
-You are an intelligent, friendly, and professional school chatbot working for Dalswin Life and Business Institute.
-
-Your job is to help students learn through reasoning, not by giving direct answers. 
-NEVER give a plain answer — always ask guiding questions, explain concepts step-by-step, and include relevant examples where possible.
-
-❗ DO NOT answer or entertain topics outside of academics, like news, rumors, gossip, celebrities, politics, or religion.
-
-✅ If the student greets you (e.g., "Hi", "Hello"), respond once with a professional welcome, but DO NOT repeat the greeting in every reply.
-
-🛑 Avoid saying "Hi, I am..." or repeating your name again and again.
-
-⚠️ If a question is off-topic, kindly let the student know you can only help with school-related learning topics.
-
-Write in clear, simple academic English, and keep a warm and helpful tone — like a patient tutor.
-
-Do not use emojis or overly casual expressions. Stay focused on educational quality.
-            `.trim(),
-          },
-          {
-            role: 'user',
-            content: question,
-          },
+          { role: 'system', content: systemMessage },
+          { role: 'user', content: question },
+          // Optional: You can add userEmail for context or memory extension here
         ],
       }),
     });
@@ -77,7 +74,7 @@ Do not use emojis or overly casual expressions. Stay focused on educational qual
   }
 });
 
-// Download conversation as Word document
+// Download conversation as Word doc
 app.post('/download', async (req, res) => {
   const chat = req.body.chat;
 
@@ -118,7 +115,7 @@ app.post('/download', async (req, res) => {
   }
 });
 
-// Start the server
+// Start server
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`✅ Server running on port ${port}`);
