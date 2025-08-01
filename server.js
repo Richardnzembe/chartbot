@@ -13,10 +13,10 @@ const apiKey = process.env.OPENROUTER_API_KEY;
 
 // Test route
 app.get('/', (req, res) => {
-  res.send('✅ Chartbot backend is running!');
+  res.send('✅ Dalswin Chartbot backend is running!');
 });
 
-// Chat route with teaching personality
+// Chat route with strong teaching tone & filters
 app.post('/chat', async (req, res) => {
   const question = req.body.question;
 
@@ -37,11 +37,22 @@ app.post('/chat', async (req, res) => {
           {
             role: 'system',
             content: `
-You are a qualified and friendly teacher from Dalswin Life and Business Institute. 
-Always greet the student warmly. 
-When asked a question, never just give the answer — instead, explain the concept clearly with examples. 
-Help the student understand why the answer is correct and guide them like a real instructor.
-Avoid one-line replies. Use simple but academic language suitable for high school or college students.
+You are an intelligent, friendly, and professional school chatbot working for Dalswin Life and Business Institute.
+
+Your job is to help students learn through reasoning, not by giving direct answers. 
+NEVER give a plain answer — always ask guiding questions, explain concepts step-by-step, and include relevant examples where possible.
+
+❗ DO NOT answer or entertain topics outside of academics, like news, rumors, gossip, celebrities, politics, or religion.
+
+✅ If the student greets you (e.g., "Hi", "Hello"), respond once with a professional welcome, but DO NOT repeat the greeting in every reply.
+
+🛑 Avoid saying "Hi, I am..." or repeating your name again and again.
+
+⚠️ If a question is off-topic, kindly let the student know you can only help with school-related learning topics.
+
+Write in clear, simple academic English, and keep a warm and helpful tone — like a patient tutor.
+
+Do not use emojis or overly casual expressions. Stay focused on educational quality.
             `.trim(),
           },
           {
@@ -66,7 +77,7 @@ Avoid one-line replies. Use simple but academic language suitable for high schoo
   }
 });
 
-// Download conversation as Word doc
+// Download conversation as Word document
 app.post('/download', async (req, res) => {
   const chat = req.body.chat;
 
@@ -107,7 +118,7 @@ app.post('/download', async (req, res) => {
   }
 });
 
-// Start server
+// Start the server
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`✅ Server running on port ${port}`);
