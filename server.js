@@ -9,39 +9,61 @@ app.use(express.json());
 
 const apiKey = process.env.OPENROUTER_API_KEY;
 
-// Test route
+// Basic in-memory map to store user topic preference (for this version)
+const userTopics = {}; // Example: { "student@email.com": "math" }
+
+// Home route
 app.get('/', (req, res) => {
   res.send('✅ Chartbot backend is running!');
 });
 
-// Chat route with teaching personality and quiz mode
+// Main Chat route
 app.post('/chat', async (req, res) => {
-  const { question, userEmail, mode } = req.body;
+  const { question, userEmail } = req.body;
 
-  if (!question) {
-    return res.status(400).json({ error: 'No question provided' });
-  }
-  if (!userEmail) {
-    return res.status(400).json({ error: 'User email required for memory' });
+  if (!question || !userEmail) {
+    return res.status(400).json({ error: 'Missing question or user email' });
   }
 
-  // System message changes based on mode
-  const systemMessage = mode === 'quiz'
-    ? `
-You are a professional quiz coach at Dalswin Life and Business Institute.
-When in quiz mode, ask the student questions related to school subjects, guide their thinking, and explain answers step-by-step.
-Do not give direct answers immediately. Engage the student in active learning.
-Use clear, friendly, and encouraging language.
-Avoid off-topic discussions or rumors.
-    `.trim()
-    : `
-You are a qualified and friendly teacher from Dalswin Life and Business Institute.
-Always greet the student warmly but only once per session.
-Explain concepts clearly with examples.
-Avoid giving direct answers; guide the student to understand the reasoning.
-Use simple academic language suitable for high school and college students.
-Avoid off-topic discussions or rumors.
-    `.trim();
+  // If it's a new user, assign them a blank topic
+  if (!userTopics[userEmail]) {
+    userTopics[userEmail] = '';
+  }
+
+  // Build system message to control bot behavior
+  const systemPrompt = `
+You are an expert teacher and instructor at Dalswin Life and Business Institute, similar to the CS50 virtual assistant.
+You always help students with accurate, academic, and in-depth explanations.
+Never give straight answers — instead, teach students how to figure things out using examples, analogies, and step-by-step reasoning.
+
+Rules:
+- Do not discuss rumors, personal opinions, or non-educational content.
+- If the question is off-topic (e.g., politics, news, gossip, entertainment), politely say you only assist with academic content.
+- Avoid repeating greetings like "Hi, how can I help" in every response.
+- Remember the student’s focus area per session and keep responses within that scope.
+
+If the student’s topic is not clear yet, gently ask them what subject they're working on.
+Once known, stick to that subject in all replies.
+
+Respond with an academic, respectful, and supportive tone.
+`;
+
+  const userMessage = question.trim();
+
+  // Optional keyword detection to set focus (simple implementation)
+  const schoolSubjects = ['math', 'history', 'biology', 'science', 'computer', 'english', 'physics', 'chemistry', 'programming'];
+
+  for (let subject of schoolSubjects) {
+    if (userMessage.toLowerCase().includes(subject)) {
+      userTopics[userEmail] = subject;
+      break;
+    }
+  }
+
+  const knownTopic = userTopics[userEmail];
+  const userPrompt = knownTopic
+    ? `Topic: ${knownTopic}\nQuestion: ${userMessage}`
+    : userMessage;
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -53,9 +75,8 @@ Avoid off-topic discussions or rumors.
       body: JSON.stringify({
         model: 'mistralai/mistral-7b-instruct',
         messages: [
-          { role: 'system', content: systemMessage },
-          { role: 'user', content: question },
-          // Optional: You can add userEmail for context or memory extension here
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
         ],
       }),
     });
@@ -63,18 +84,18 @@ Avoid off-topic discussions or rumors.
     const data = await response.json();
 
     if (!data || !data.choices || !data.choices[0]) {
-      return res.status(500).json({ error: 'No response from OpenRouter.' });
+      return res.status(500).json({ error: 'No response from AI' });
     }
 
     const message = data.choices[0].message.content;
     res.json({ answer: message });
   } catch (error) {
     console.error('Chat error:', error);
-    res.status(500).json({ error: 'Failed to fetch from OpenRouter.' });
+    res.status(500).json({ error: 'Failed to fetch from OpenRouter' });
   }
 });
 
-// Download conversation as Word doc
+// Download conversation route (unchanged)
 app.post('/download', async (req, res) => {
   const chat = req.body.chat;
 
